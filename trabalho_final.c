@@ -1,8 +1,9 @@
 #include "raylib.h"
-#include <stdlib.h>
-#define LARGURA 800
-#define ALTURA 800
-#define TAMANHO 20 //TAMANHO Da cobra
+
+#define LARGURA_TELA 800
+#define ALTURA_TELA 800
+#define inicial_cobra 20 //cobra inicialmente
+#define MAX_COMPRIMENTO 100 //maximo de comprimento da cobra
 
 typedef struct {
     int x;
@@ -15,22 +16,66 @@ typedef struct {
     int direcao;
 } Cobra;
 
-//Iniciando o jogo:
+Cobra cobra;
+
+void IniciarJogo();
+void AtualizarJogo();
+void DesenharJogo();
+
+int main() {
+    InitWindow(LARGURA_TELA, ALTURA_TELA, "Snake");
+    SetTargetFPS(10);
+    IniciarJogo();
+
+    while (!WindowShouldClose()) {
+        AtualizarJogo();
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+        DesenharJogo();
+        EndDrawing();
+    }
+
+    CloseWindow();
+    return 0;
+}
 
 void IniciarJogo() {
     cobra.comprimento = 1;
     cobra.direcao = 4;  // Direita
-    cobra.posicoes[0].x = 1;
-    cobra.posicoes[0].y = 1;
+    cobra.posicoes[0].x = LARGURA_TELA / (2 * inicial_cobra);
+    cobra.posicoes[0].y = ALTURA_TELA / (2 * inicial_cobra);
 }
 
-void Movimentacao(){
+void AtualizarJogo() {
     if (IsKeyPressed(KEY_RIGHT) && cobra.direcao != 3) cobra.direcao = 4;
     if (IsKeyPressed(KEY_LEFT) && cobra.direcao != 4) cobra.direcao = 3;
     if (IsKeyPressed(KEY_UP) && cobra.direcao != 2) cobra.direcao = 1;
     if (IsKeyPressed(KEY_DOWN) && cobra.direcao != 1) cobra.direcao = 2;
 
+    // Atualizar posição da cobra
+    for (int i = cobra.comprimento - 1; i > 0; i--) {
+        cobra.posicoes[i] = cobra.posicoes[i - 1];
+    }
+
+    if (cobra.direcao == 4) cobra.posicoes[0].x += 1;
+    if (cobra.direcao == 3) cobra.posicoes[0].x -= 1;
+    if (cobra.direcao == 1) cobra.posicoes[0].y -= 1;
+    if (cobra.direcao == 2) cobra.posicoes[0].y += 1;
+
+
+    if (cobra.posicoes[0].x >= LARGURA_TELA / inicial_cobra) cobra.posicoes[0].x = 0;
+    if (cobra.posicoes[0].x < 0) cobra.posicoes[0].x = LARGURA_TELA / inicial_cobra - 1;
+    if (cobra.posicoes[0].y >= ALTURA_TELA / inicial_cobra) cobra.posicoes[0].y = 0;
+    if (cobra.posicoes[0].y < 0) cobra.posicoes[0].y = ALTURA_TELA / inicial_cobra - 1;
 }
+
+void DesenharJogo() {
+    // Desenhar a cobra
+    for (int i = 0; i < cobra.comprimento; i++) {
+        DrawRectangle(cobra.posicoes[i].x * inicial_cobra, cobra.posicoes[i].y * inicial_cobra, inicial_cobra, inicial_cobra, DARKGREEN);
+    }
+}
+
 /*/////IGNORA QUE ISSO AQ FOI MINHA PRATICA QUE EU TO BASENADO
 int podeMover(int x, int y, int dx, int dy, int largura, int altura) {
     int posicao_x = x + dx * TAMANHO;
@@ -43,8 +88,6 @@ int podeMover(int x, int y, int dx, int dy, int largura, int altura) {
         return 0;
     }
 }
-
-
 int main(){
     int altura=ALTURA;
     int largura=LARGURA;
@@ -57,7 +100,7 @@ int main(){
 
      // Loop principal do jogo
     while (!WindowShouldClose()) {
-        int dx = 0, dy = 0; //posicoes para ver se podem ou n�o se mover
+        int dx = 0, dy = 0; //posicoes para ver se podem ou não se mover
         if (IsKeyPressed(KEY_RIGHT)) dx = 1;
         if (IsKeyPressed(KEY_LEFT)) dx = -1;
         if (IsKeyPressed(KEY_UP)) dy = -1;
