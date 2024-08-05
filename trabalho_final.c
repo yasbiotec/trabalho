@@ -40,7 +40,7 @@ static int pontos=0;
 static int recorde=0;
 
 //------------------------------------------------------------------------------------
-//Declaração de funções locais
+//Declara  o de fun  es locais
 //------------------------------------------------------------------------------------
 static void InitGame(void);         // Iniciando o jogo
 static void UpdateGame(void);       // atualizando o jogo
@@ -62,7 +62,7 @@ int main(void)
     //--------------------------------------------------------------------------------------
 
     // Main game loop
-    while (!WindowShouldClose())    //Enquanto a janela do game não fechar...
+    while (!WindowShouldClose())    //Enquanto a janela do game n o fechar...
     {
         // atualiza e desenha
         //----------------------------------------------------------------------------------
@@ -79,7 +79,11 @@ int main(void)
     return 0;
 }
 
-//iniciacao do game
+//------------------------------------------------------------------------------------
+// Module Functions Definitions (local)
+//------------------------------------------------------------------------------------
+
+// Initialize game variables
 void InitGame(void)
 {
     framesCounter = 0;
@@ -121,7 +125,7 @@ void UpdateGame(void)
 
         if (!pause)
         {
-            // Controle do jogo 
+            // Player control
             if (IsKeyPressed(KEY_RIGHT)||IsKeyPressed(KEY_D) && (snake[0].speed.x == 0) && allowMove)
             {
                 snake[0].speed = (Vector2){ CEDULAS, 0 };
@@ -143,7 +147,7 @@ void UpdateGame(void)
                 allowMove = false;
             }
 
-            // Movimentacao da Snake
+            // Snake movement
             for (int i = 0; i < counterTail; i++) snakePosition[i] = snake[i].posicao;
 
             if ((framesCounter%5) == 0)
@@ -168,13 +172,13 @@ void UpdateGame(void)
                 gameOver = true;
             }
 
-            // Se ocorre as colisao
+            // Collision with yourself
             for (int i = 1; i < counterTail; i++)
             {
                 if ((snake[0].posicao.x == snake[i].posicao.x) && (snake[0].posicao.y == snake[i].posicao.y)) gameOver = true;
             }
 
-            // Calculo da posicao da fruta
+            // Fruit position calculation
             if (!fruit.active)
             {
                 fruit.active = true;
@@ -222,7 +226,7 @@ void DrawGame(void)
 
         if (!gameOver)
         {
-            //Desenha as linhas
+            // Draw grid lines
             for (int i = 0; i < ALTURA/CEDULAS + 1; i++)
             {
                 DrawLineV((Vector2){CEDULAS*i + offset.x/2, offset.y/2}, (Vector2){CEDULAS*i + offset.x/2, LARGURA - offset.y/2}, LIGHTGRAY);
@@ -233,10 +237,10 @@ void DrawGame(void)
                 DrawLineV((Vector2){offset.x/2, CEDULAS*i + offset.y/2}, (Vector2){ALTURA - offset.x/2, CEDULAS*i + offset.y/2}, LIGHTGRAY);
             }
 
-            // desenha snake
+            // Draw snake
             for (int i = 0; i < counterTail; i++) DrawRectangleV(snake[i].posicao, snake[i].tamanho, snake[i].color);
 
-            // desenha a fruta
+            // Draw fruit to pick
             DrawRectangleV(fruit.posicao, fruit.tamanho, fruit.color);
 
             if (pause){
@@ -246,9 +250,9 @@ void DrawGame(void)
         }
         else{
             DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth()/2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20)/2, GetScreenHeight()/2 - 50, 20, GRAY);
-            if(pontos>recorde){ //Se os pontos forem maiores que o recorde, substitui o recorde pela pontuação atual
+            if(pontos>recorde){
                 recorde=pontos;
-                pontos=0; //zera a pontuação para o proximo 
+                pontos=0;
             }
             DrawText(TextFormat("RECORDE: %d", recorde), ALTURA / 2 - MeasureText(TextFormat("RECORDE: %d", recorde), 20) / 2, LARGURA / 2, 20, GRAY);
 
@@ -257,7 +261,7 @@ void DrawGame(void)
     EndDrawing();
 }
 
-// da base ai
+// Unload game variables
 void UnloadGame(void)
 {
     // TODO: Unload all dynamic loaded data (textures, sounds, models...)
