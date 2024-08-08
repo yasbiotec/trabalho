@@ -5,6 +5,7 @@
 //TAMANHO DA TELA:
 #define ALTURA 800
 #define LARGURA 800
+#define TAM_FONTE 25
 
 //----------------------------------------------------------------------------------
 // TIPOS E ESTRUTURA DO JOGO:
@@ -38,6 +39,7 @@ static Vector2 offset = { 0 };
 static int counterTail = 0;
 static int pontos=0;
 static int recorde=0;
+int opcao=0;
 
 //------------------------------------------------------------------------------------
 //Declara  o de fun  es locais
@@ -47,34 +49,44 @@ static void UpdateGame(void);       // atualizando o jogo
 static void DrawGame(void);         // Desenhando o jogo
 static void UnloadGame(void);       // Unload game
 static void UpdateDrawFrame(void);  // Atualizando e desenhando
+void MostrarPontuacoes(void);       // Mostrando as pontuações
+int Menu(void);                     // Função do menu principal
 
 //------------------------------------------------------------------------------------
 // Main do jogo
 //------------------------------------------------------------------------------------
 int main(void)
 {
-    // Initialization (Note windowTitle is unused on Android)
-    //---------------------------------------------------------
     InitWindow(ALTURA, LARGURA, "Trabalho final: Snake");
 
-    InitGame();
     SetTargetFPS(60);
-    //--------------------------------------------------------------------------------------
 
-    // Main game loop
-    while (!WindowShouldClose())    //Enquanto a janela do game n o fechar...
+    while (!WindowShouldClose())
     {
-        // atualiza e desenha
-        //----------------------------------------------------------------------------------
-        UpdateDrawFrame();
-        //----------------------------------------------------------------------------------
-    }
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
-    UnloadGame();         // Unload loaded data (textures, sounds, models...)
+        int estadoJogo = Menu();
 
-    CloseWindow();        // Close window and OpenGL context
-    //--------------------------------------------------------------------------------------
+        if (estadoJogo == 1)  // Jogar
+        {
+            InitGame();
+            while (!WindowShouldClose() && !gameOver)
+            {
+                UpdateDrawFrame();
+            }
+
+            gameOver = false;
+        }
+        else if (estadoJogo == 2)  // Mostrar pontuações
+        {
+            MostrarPontuacoes();
+        }
+        else if (estadoJogo == 3)  // Sair
+        {
+            break;
+        }
+    }
+
+    UnloadGame();
+    CloseWindow();
 
     return 0;
 }
@@ -272,4 +284,69 @@ void UpdateDrawFrame(void)
 {
     UpdateGame();
     DrawGame();
+}
+// Função do Menu
+int Menu(void)
+{
+    while (!WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+
+        DrawText("Jogar", LARGURA / 2, ALTURA / 4, TAM_FONTE, BLACK);
+        DrawText("Score", LARGURA / 2, ALTURA / 4 + 50, TAM_FONTE, BLACK);
+        DrawText("Sair", LARGURA / 2, ALTURA / 4 + 100, TAM_FONTE, BLACK);
+
+        switch (opcao)
+        {
+            case 0:
+                DrawRectangleLines(LARGURA / 2 - 10, ALTURA / 4 - 5, 100, 30, RED);
+                break;
+            case 1:
+                DrawRectangleLines(LARGURA / 2 - 10, ALTURA / 4 + 50 - 5, 100, 30, RED);
+                break;
+            case 2:
+                DrawRectangleLines(LARGURA / 2 - 10, ALTURA / 4 + 100 - 5, 100, 30, RED);
+                break;
+        }
+
+        EndDrawing();
+
+        if (IsKeyPressed(KEY_UP))
+        {
+            opcao--;
+            if (opcao < 0) opcao = 2;
+        }
+        else if (IsKeyPressed(KEY_DOWN))
+        {
+            opcao++;
+            if (opcao > 2) opcao = 0;
+        }
+        else if (IsKeyPressed(KEY_ENTER))
+        {
+            return opcao + 1;  // 1 = Jogar, 2 = Score, 3 = Sair
+        }
+    }
+
+    return 3;  // Se a janela for fechada, retorna para a opção de sair
+}
+
+// função temporária
+// Função para mostrar as pontuações
+void MostrarPontuacoes(void)
+{
+    while (!WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+        DrawText("Score", LARGURA / 2 - MeasureText("Score", TAM_FONTE) / 2, ALTURA / 4, TAM_FONTE, BLACK);
+        DrawText(TextFormat("Recorde: %d", recorde), LARGURA / 2 - MeasureText(TextFormat("Recorde: %d", recorde), TAM_FONTE) / 2, ALTURA / 4 + 50, TAM_FONTE, BLACK);
+        DrawText("Pressione [ENTER] para voltar", LARGURA / 2 - MeasureText("Pressione [ENTER] para voltar", 20) / 2, ALTURA / 4 + 100, 20, GRAY);
+        EndDrawing();
+
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE))
+        {
+            break;  // Volta ao menu
+        }
+    }
 }
