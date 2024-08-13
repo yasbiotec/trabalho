@@ -21,6 +21,7 @@ typedef struct Food {
     Vector2 posicao;
     Vector2 tamanho;
     bool active;
+    bool special;
     Color color;
 } Food;
 
@@ -37,15 +38,15 @@ static Vector2 snakePosition[Cobra_tamanho] = { 0 };
 static bool allowMove = false;
 static Vector2 offset = { 0 };
 static int counterTail = 0;
-static int pontos=0;
-static int recorde=0;
-int opcao=0;
+static int pontos = 0;
+static int recorde = 0;
+int opcao = 0;
 
 //------------------------------------------------------------------------------------
-//Declara  o de fun  es locais
+//Declaração de funções locais
 //------------------------------------------------------------------------------------
 static void InitGame(void);         // Iniciando o jogo
-static void UpdateGame(void);       // atualizando o jogo
+static void UpdateGame(void);       // Atualizando o jogo
 static void DrawGame(void);         // Desenhando o jogo
 static void UnloadGame(void);       // Unload game
 static void UpdateDrawFrame(void);  // Atualizando e desenhando
@@ -105,13 +106,13 @@ void InitGame(void)
     counterTail = 1;
     allowMove = false;
 
-    offset.x = ALTURA%CEDULAS;
-    offset.y = LARGURA%CEDULAS;
+    offset.x = ALTURA % CEDULAS;
+    offset.y = LARGURA % CEDULAS;
 
     for (int i = 0; i < Cobra_tamanho; i++)
     {
-        snake[i].posicao = (Vector2){ offset.x/2, offset.y/2 };
-        snake[i].tamanho = (Vector2){ CEDULAS,CEDULAS };
+        snake[i].posicao = (Vector2){ offset.x / 2, offset.y / 2 };
+        snake[i].tamanho = (Vector2){ CEDULAS, CEDULAS };
         snake[i].speed = (Vector2){ CEDULAS, 0 };
 
         if (i == 0) snake[i].color = DARKBLUE;
@@ -123,9 +124,10 @@ void InitGame(void)
         snakePosition[i] = (Vector2){ 0.0f, 0.0f };
     }
 
-    fruit.tamanho = (Vector2){CEDULAS,CEDULAS };
+    fruit.tamanho = (Vector2){ CEDULAS, CEDULAS };
     fruit.color = SKYBLUE;
     fruit.active = false;
+    fruit.special = false; // Inicia como uma fruta normal
 }
 
 // Update game (one frame)
@@ -138,22 +140,22 @@ void UpdateGame(void)
         if (!pause)
         {
             // Player control
-            if (IsKeyPressed(KEY_RIGHT)||IsKeyPressed(KEY_D) && (snake[0].speed.x == 0) && allowMove)
+            if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D) && (snake[0].speed.x == 0) && allowMove)
             {
                 snake[0].speed = (Vector2){ CEDULAS, 0 };
                 allowMove = false;
             }
-            if (IsKeyPressed(KEY_LEFT)||IsKeyPressed(KEY_A) && (snake[0].speed.x == 0) && allowMove)
+            if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A) && (snake[0].speed.x == 0) && allowMove)
             {
                 snake[0].speed = (Vector2){ -CEDULAS, 0 };
                 allowMove = false;
             }
-            if (IsKeyPressed(KEY_UP)||IsKeyPressed(KEY_W) && (snake[0].speed.y == 0) && allowMove)
+            if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W) && (snake[0].speed.y == 0) && allowMove)
             {
                 snake[0].speed = (Vector2){ 0, -CEDULAS };
                 allowMove = false;
             }
-            if (IsKeyPressed(KEY_DOWN)||IsKeyPressed(KEY_S) && (snake[0].speed.y == 0) && allowMove)
+            if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S) && (snake[0].speed.y == 0) && allowMove)
             {
                 snake[0].speed = (Vector2){ 0, CEDULAS };
                 allowMove = false;
@@ -162,7 +164,7 @@ void UpdateGame(void)
             // Snake movement
             for (int i = 0; i < counterTail; i++) snakePosition[i] = snake[i].posicao;
 
-            if ((framesCounter%5) == 0)
+            if ((framesCounter % 5) == 0)
             {
                 for (int i = 0; i < counterTail; i++)
                 {
@@ -172,7 +174,7 @@ void UpdateGame(void)
                         snake[0].posicao.y += snake[0].speed.y;
                         allowMove = true;
                     }
-                    else snake[i].posicao = snakePosition[i-1];
+                    else snake[i].posicao = snakePosition[i - 1];
                 }
             }
 
@@ -194,26 +196,57 @@ void UpdateGame(void)
             if (!fruit.active)
             {
                 fruit.active = true;
-                fruit.posicao = (Vector2){ GetRandomValue(0, (ALTURA/CEDULAS) - 1)*CEDULAS + offset.x/2, GetRandomValue(0, (LARGURA/CEDULAS) - 1)*CEDULAS + offset.y/2 };
+                fruit.posicao = (Vector2){ GetRandomValue(0, (ALTURA / CEDULAS) - 1) * CEDULAS + offset.x / 2, GetRandomValue(0, (LARGURA / CEDULAS) - 1) * CEDULAS + offset.y / 2 };
+
+                //Determina se a fruta tem cor
+                fruit.special = GetRandomValue(0, 2) == 0; // 33% chance of being special
 
                 for (int i = 0; i < counterTail; i++)
                 {
                     while ((fruit.posicao.x == snake[i].posicao.x) && (fruit.posicao.y == snake[i].posicao.y))
                     {
-                        fruit.posicao = (Vector2){ GetRandomValue(0, (ALTURA/CEDULAS) - 1)*CEDULAS + offset.x/2, GetRandomValue(0, (LARGURA/CEDULAS) - 1)*CEDULAS + offset.y/2 };
+                        fruit.posicao = (Vector2){ GetRandomValue(0, (ALTURA / CEDULAS) - 1) * CEDULAS + offset.x / 2, GetRandomValue(0, (LARGURA / CEDULAS) - 1) * CEDULAS + offset.y / 2 };
                         i = 0;
                     }
                 }
             }
 
-            // Collision
+            // Collision with fruit
             if ((snake[0].posicao.x < (fruit.posicao.x + fruit.tamanho.x) && (snake[0].posicao.x + snake[0].tamanho.x) > fruit.posicao.x) &&
                 (snake[0].posicao.y < (fruit.posicao.y + fruit.tamanho.y) && (snake[0].posicao.y + snake[0].tamanho.y) > fruit.posicao.y))
             {
-                snake[counterTail].posicao = snakePosition[counterTail - 1];
-                counterTail += 1;
+                if (fruit.special){
+                    // determina  o poder da fruta e a cor dela
+                    fruit.color= RED;
+                    pontos += 15;
+                    int effect = GetRandomValue(0, 2);
+
+                    if (effect == 0)
+                    {
+                        // DEIXA MAIS RAPIDO
+                        if (framesCounter > 2) framesCounter -= 2;
+                    }
+                    else if (effect == 1)
+                    {
+                        // DEIXA MAIS LENTO
+                        if (framesCounter < 20) framesCounter += 2;
+                    }
+                    else if (effect == 2)
+                    {
+                        // REDUZ TAMANHO
+                        if (counterTail > 1) counterTail--;
+                    }
+                }
+                else
+                {
+                    // Normal fruit behavior
+                    snake[counterTail].posicao = snakePosition[counterTail - 1];
+                    counterTail += 1;
+                    fruit.color= SKYBLUE;
+                }
+
                 fruit.active = false;
-                pontos+=10;
+                pontos += 10;
             }
 
             framesCounter++;
@@ -234,41 +267,43 @@ void DrawGame(void)
 {
     BeginDrawing();
 
-        ClearBackground(RAYWHITE);
+    ClearBackground(RAYWHITE);
 
-        if (!gameOver)
+    if (!gameOver)
+    {
+        // Draw grid lines
+        for (int i = 0; i < ALTURA / CEDULAS + 1; i++)
         {
-            // Draw grid lines
-            for (int i = 0; i < ALTURA/CEDULAS + 1; i++)
-            {
-                DrawLineV((Vector2){CEDULAS*i + offset.x/2, offset.y/2}, (Vector2){CEDULAS*i + offset.x/2, LARGURA - offset.y/2}, LIGHTGRAY);
-            }
-
-            for (int i = 0; i < LARGURA/CEDULAS + 1; i++)
-            {
-                DrawLineV((Vector2){offset.x/2, CEDULAS*i + offset.y/2}, (Vector2){ALTURA - offset.x/2, CEDULAS*i + offset.y/2}, LIGHTGRAY);
-            }
-
-            // Draw snake
-            for (int i = 0; i < counterTail; i++) DrawRectangleV(snake[i].posicao, snake[i].tamanho, snake[i].color);
-
-            // Draw fruit to pick
-            DrawRectangleV(fruit.posicao, fruit.tamanho, fruit.color);
-
-            if (pause){
-                DrawText("GAME PAUSED", ALTURA/2 - MeasureText("GAME PAUSED", 40)/2, LARGURA/2 - 40, 40, GRAY);
-                DrawText(TextFormat("PONTOS: %d", pontos), ALTURA / 2 - MeasureText(TextFormat("PONTOS: %d", pontos), 20) / 2, LARGURA / 2, 20, GRAY);
+            DrawLineV((Vector2){ CEDULAS * i + offset.x / 2, offset.y / 2 }, (Vector2){ CEDULAS * i + offset.x / 2, LARGURA - offset.y / 2 }, LIGHTGRAY);
         }
-        }
-        else{
-            DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth()/2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20)/2, GetScreenHeight()/2 - 50, 20, GRAY);
-            if(pontos>recorde){
-                recorde=pontos;
-                pontos=0;
-            }
-            DrawText(TextFormat("RECORDE: %d", recorde), ALTURA / 2 - MeasureText(TextFormat("RECORDE: %d", recorde), 20) / 2, LARGURA / 2, 20, GRAY);
 
+        for (int i = 0; i < LARGURA / CEDULAS + 1; i++)
+        {
+            DrawLineV((Vector2){ offset.x / 2, CEDULAS * i + offset.y / 2 }, (Vector2){ ALTURA - offset.x / 2, CEDULAS * i + offset.y / 2 }, LIGHTGRAY);
         }
+
+        // Draw snake
+        for (int i = 0; i < counterTail; i++) DrawRectangleV(snake[i].posicao, snake[i].tamanho, snake[i].color);
+
+        // Draw fruit to pick
+        DrawRectangleV(fruit.posicao, fruit.tamanho, fruit.color);
+
+        if (pause)
+        {
+            DrawText("GAME PAUSED", ALTURA / 2 - MeasureText("GAME PAUSED", 40) / 2, LARGURA / 2 - 40, 40, GRAY);
+            DrawText(TextFormat("PONTOS: %d", pontos), ALTURA / 2 - MeasureText(TextFormat("PONTOS: %d", pontos), 20) / 2, LARGURA / 2, 20, GRAY);
+        }
+    }
+    else
+    {
+        DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth() / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2, GetScreenHeight() / 2 - 50, 20, GRAY);
+        if (pontos > recorde)
+        {
+            recorde = pontos;
+            pontos = 0;
+        }
+        DrawText(TextFormat("RECORDE: %d", recorde), ALTURA / 2 - MeasureText(TextFormat("RECORDE: %d", recorde), 20) / 2, LARGURA / 2, 20, GRAY);
+    }
 
     EndDrawing();
 }
@@ -285,6 +320,7 @@ void UpdateDrawFrame(void)
     UpdateGame();
     DrawGame();
 }
+
 // Função do Menu
 int Menu(void)
 {
