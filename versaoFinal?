@@ -475,6 +475,7 @@ void DrawGame(void)
     }
     else if (gameOver)
     {
+        faseAtual=1;
         DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth() / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2, GetScreenHeight() / 2 - 50, 20, GRAY);
         if (pontos > recorde)
         {
