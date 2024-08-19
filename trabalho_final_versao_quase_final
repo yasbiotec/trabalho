@@ -14,7 +14,6 @@
 #define MAPA2  "mapa_2.txt"
 #define MAPA3 "mapa_3.txt"
 #define MAPA4 "mapa_4.txt"
-#define SEGUNDOS 5
 
 // Tipos e estruturas do jogo
 typedef struct Snake {
