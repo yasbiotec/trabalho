@@ -1,0 +1,650 @@
+#include "raylib.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define COBRA_TAMANHO    100 // Máximo do tamanho da cobra
+#define CEDULAS          25 // Tamanho das células
+#define ALTURA           800
+#define LARGURA          800
+#define TAM_FONTE        25
+#define MAX_NOME        60
+#define MAX_SCORES      10
+#define MAPA1 "mapa_1.txt"
+#define MAPA2  "mapa_2.txt"
+#define MAPA3 "mapa_3.txt"
+#define MAPA4 "mapa_4.txt"
+#define PONTOSF1 50 //define numero de pontos para trocar de fase
+#define PONTOSF2 100
+#define PONTOSF3 150
+#define PONTOSF4 200
+
+// Tipos e estruturas do jogo
+typedef struct Snake {
+    Vector2 posicao;
+    Vector2 tamanho;
+    Vector2 speed;
+    Color color;
+} Snake;
+
+typedef struct Food {
+    Vector2 posicao;
+    Vector2 tamanho;
+    bool active;
+    bool special;
+    Color color;
+} Food;
+
+typedef struct
+{
+    int pontos;
+    time_t horario;
+}PlayerScore;
+
+// Variáveis globais
+static int framesCounter = 0;
+static bool gameOver = false;
+static bool pause = false;
+static Food fruit = { 0 };
+static Snake snake[COBRA_TAMANHO] = { 0 };
+static Vector2 snakePosition[COBRA_TAMANHO] = { 0 };
+static bool allowMove = false;
+static Vector2 offset = { 0 };
+static int counterTail = 0;
+static int pontos = 0;
+static int recorde = 0;
+int opcao = 0;
+int mapaLargura = 0;
+int mapaAltura = 0;
+char **mapa;
+static PlayerScore topScores[MAX_SCORES]={};
+bool faseCompleta = false;
+int faseAtual = 1; // Começa com a fase 1
+
+
+// Declaração de funções locais
+static void InitGame(void);
+static void UpdateGame(void);
+static void DrawGame(void);
+static void UpdateDrawFrame(void);
+static void MostrarPontuacoes(void);
+static int Menu(void);
+static void CarregarMapa(const char *nomeArquivo);
+static void DesenharMapa(void);
+static bool VerificarColisaoComBarreira(Vector2 posicao);
+static void GerarFruta(void);
+static void LerPontuacao();
+static void SalvarPontuacao();
+static void AtualizarPontuacao(void);
+/*Função principal do jogo
+ Inicializa a janela do jogo, define o FPS alvo, carrega o mapa,
+ controla o fluxo do jogo e libera a memória alocada para o mapa.
+
+ returna 0 em caso de execução bem-sucedida, ou um valor diferente de zero em caso de erro.
+ */
+
+int main(void)
+{
+    InitWindow(LARGURA, ALTURA, "Trabalho final: Snake");
+    SetTargetFPS(60);
+    CarregarMapa(MAPA1);  // Carregar o mapa
+    LerPontuacao();
+    while (!WindowShouldClose())
+    {
+        int estadoJogo = Menu();
+
+        if (estadoJogo == 1)  // Jogar
+        {
+            InitGame();
+            while (!WindowShouldClose() && !gameOver)
+            {
+                UpdateDrawFrame();
+            }
+
+            gameOver = false;
+        }
+        else if (estadoJogo == 2)  // Mostrar pontuações
+        {
+            MostrarPontuacoes();
+        }
+        else if (estadoJogo == 3)  // Sair
+        {
+            break;
+        }
+    }
+    CloseWindow();
+
+    // Liberar memória do mapa
+    for (int i = 0; i < mapaAltura; i++)
+        free(mapa[i]);
+    free(mapa);
+
+    return 0;
+}
+
+/* Função para carregar o mapa do arquivo
+Carrega um mapa de um arquivo.
+parametros: nomeArquivo O nome do arquivo que contém o mapa.
+
+A função abre o arquivo especificado pelo parâmetro nomeArquivo,
+ lê as dimensões do mapa e o número de itens, aloca memória para armazenar
+ o mapa e, em seguida, lê os dados do mapa do arquivo.
+
+*/
+void CarregarMapa(const char *nomeArquivo)
+{
+    FILE *arquivo = fopen(nomeArquivo, "r");
+    if (arquivo == NULL)
+    {
+        printf("Erro ao abrir o arquivo do mapa!\n");
+        exit(1);
+    }
+
+    fscanf(arquivo, "%d %d", &mapaLargura, &mapaAltura);
+    int numItens;
+    fscanf(arquivo, "%d", &numItens);
+
+    mapa = (char **)malloc(mapaAltura * sizeof(char *));
+    for (int i = 0; i < mapaAltura; i++)
+        mapa[i] = (char *)malloc((mapaLargura + 1) * sizeof(char));
+
+    for (int i = 0; i < mapaAltura; i++)
+        fgets(mapa[i], mapaLargura + 1, arquivo);
+
+    fclose(arquivo);
+}
+
+/*função para desenhar o mapa
+Esta função itera por cada célula do mapa e desenha um retângulo
+na posição correspondente na tela. Se a célula contiver um '#'
+*/
+void DesenharMapa(void)
+{
+    for (int y = 0; y < mapaAltura; y++)
+    {
+        for (int x = 0; x < mapaLargura; x++)
+        {
+            if (mapa[y][x] == '#')
+                DrawRectangle(x * CEDULAS, y * CEDULAS, CEDULAS, CEDULAS, DARKGRAY);
+        }
+    }
+}
+
+/*função para verificar colisão
+verifica se uma determinada posição colide com uma barreira no mapa.
+ parametros: posicao A posição a ser verificada.
+ Retorna verdadeiro se a posição colidir com uma barreira, falso caso contrário.
+ A função verifica se a posição fornecida está fora dos limites do mapa ou
+ se ela está localizada em uma célula de barreira no mapa.
+*/
+bool VerificarColisaoComBarreira(Vector2 posicao)
+{
+    int x = posicao.x / CEDULAS;
+    int y = posicao.y / CEDULAS;
+
+    // Verifica se a posição está fora dos limites do mapa
+    if (x < 0 || x >= mapaLargura || y < 0 || y >= mapaAltura)
+        return true;
+
+    return (mapa[y][x] == '#');
+}
+/*Função para gerar a fruta em uma posição válida
+Gera uma fruta em uma posição válida.
+Essa função gera uma fruta em uma posição aleatória na tela.
+A posição é escolhida aleatoriamente, garantindo que não esteja em uma barreira.
+A fruta é marcada como ativa e sua cor é definida com base em se ela é especial.
+*/
+void GerarFruta(void)
+{
+    bool posicaoValida = false;
+    float numerpegoX;
+    float numerpegoY;
+
+    while (!posicaoValida)
+    {
+
+
+        fruit.posicao = (Vector2)
+        {
+            GetRandomValue(1, (LARGURA/CEDULAS)-1) * CEDULAS,
+            GetRandomValue(1, (ALTURA/CEDULAS)-1) * CEDULAS  // Evita a borda do mapa
+        };
+
+
+        if (!VerificarColisaoComBarreira(fruit.posicao))
+        {
+            posicaoValida = true;
+            fruit.special = GetRandomValue(0, 2) == 0; // 33% chance de ser especial
+            fruit.color = fruit.special ? RED : SKYBLUE;
+            fruit.active = true;  // Certifique-se de marcar a fruta como ativa
+        }
+    }
+}
+/*Função para inicializar o jogo
+Esta função configura o estado inicial do jogo, incluindo a posição, tamanho,
+velocidade e cor da cobra e da fruta.
+Também inicializa as variáveis do jogo, como framesCounter, gameOver,
+pause, counterTail, allowMove, offset e os arrays snake e fruit.
+*/
+void InitGame(void)
+{
+    framesCounter = 0;
+    gameOver = false;
+    pause = false;
+
+    counterTail = 1;
+    allowMove = false;
+
+    offset.x = 0;
+    offset.y = 0;
+
+    for (int i = 0; i < COBRA_TAMANHO; i++)
+    {
+        snake[i].posicao = (Vector2){ LARGURA / 2, ALTURA / 2 };
+        snake[i].tamanho = (Vector2){ CEDULAS, CEDULAS };
+        snake[i].speed = (Vector2){ CEDULAS, 0 };
+
+        if (i == 0) snake[i].color = DARKBLUE;
+        else snake[i].color = BLUE;
+    }
+
+    fruit.tamanho = (Vector2){ CEDULAS, CEDULAS };
+    fruit.active = false;
+
+    GerarFruta(); // Inicializa a fruta
+}
+
+//Funcao que Mostra mensagem de fase completa:
+void MostrarMensagemFaseCompleta(int fase)
+{
+    const char *mensagem = TextFormat("Fase %d completa!", fase);
+    int larguraMensagem = MeasureText(mensagem, 40);
+
+    // Exibir a mensagem "Fase completa" antes de contar 4 segundos e começar a proxima
+    DrawRectangle(0, 0, LARGURA, ALTURA, (Color){0, 255, 0, 100});
+    DrawText(mensagem, LARGURA / 2 - larguraMensagem / 2, ALTURA / 2 - 40, 40, BLACK);
+    EndDrawing();
+    }
+//Funçao para Mudar de fase
+void mudarFase(int novaFase, int mensagemFase, const char* mapa) {
+    if (faseAtual != novaFase) {
+        faseCompleta = false;
+        faseAtual = novaFase;
+    }
+
+    if (!faseCompleta) {
+        faseCompleta = true;
+        MostrarMensagemFaseCompleta(mensagemFase);
+        sleep(2);
+    }
+    CarregarMapa(mapa);
+}
+
+
+/*Função para atualizar o jogo
+Essa função lida com a lógica do jogo, incluindo o controle do jogador, movimento da cobra, detecção de colisões,
+consumo de frutas, e condições de fim de jogo. Também atualiza o estado do jogo com base no contador de frames,
+sinalizador de fim de jogo, sinalizador de pausa e atualiza o estado do jogo com base no mapa atual,
+fase e pontuação e outras variáveis relevantes.
+
+*/
+void UpdateGame(void)
+{
+    if (!gameOver)
+    {
+        if (IsKeyPressed(KEY_TAB)) pause = !pause;
+
+        if (!pause)
+        {
+            // Controle do jogador
+            if ((IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) && (snake[0].speed.x == 0) && allowMove)
+            {
+                snake[0].speed = (Vector2){ CEDULAS, 0 };
+                allowMove = false;
+            }
+            if ((IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) && (snake[0].speed.x == 0) && allowMove)
+            {
+                snake[0].speed = (Vector2){ -CEDULAS, 0 };
+                allowMove = false;
+            }
+            if ((IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) && (snake[0].speed.y == 0) && allowMove)
+            {
+                snake[0].speed = (Vector2){ 0, -CEDULAS };
+                allowMove = false;
+            }
+            if ((IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) && (snake[0].speed.y == 0) && allowMove)
+            {
+                snake[0].speed = (Vector2){ 0, CEDULAS };
+                allowMove = false;
+            }
+
+            // Movimento da cobra
+            for (int i = 0; i < counterTail; i++) snakePosition[i] = snake[i].posicao;
+
+            if ((framesCounter % 5) == 0)
+            {
+                Vector2 novaPosicao = (Vector2){
+                    snake[0].posicao.x + snake[0].speed.x,
+                    snake[0].posicao.y + snake[0].speed.y
+                };
+
+                // Verificar se a nova posição é uma barreira
+                if (VerificarColisaoComBarreira(novaPosicao))
+                {
+                    gameOver = true; // Morrer ao tocar a barreira
+                }
+                else
+                {
+                    snake[0].posicao = novaPosicao;
+
+                    // Atualizar o corpo da cobra
+                    for (int i = 1; i < counterTail; i++)
+                    {
+                        snake[i].posicao = snakePosition[i - 1];
+                    }
+
+                    allowMove = true;
+                }
+            }
+
+            // Colisão com si mesmo
+            for (int i = 1; i < counterTail; i++)
+            {
+                if ((snake[0].posicao.x == snake[i].posicao.x) && (snake[0].posicao.y == snake[i].posicao.y))
+                {
+                    gameOver = true;
+                }
+            }
+
+            // Atualizar posição da fruta
+            if (!fruit.active)
+            {
+                GerarFruta();
+            }
+
+            // Colisão com a fruta
+            if ((snake[0].posicao.x < (fruit.posicao.x + fruit.tamanho.x) &&
+                (snake[0].posicao.x + snake[0].tamanho.x) > fruit.posicao.x) &&
+                (snake[0].posicao.y < (fruit.posicao.y + fruit.tamanho.y) &&
+                (snake[0].posicao.y + snake[0].tamanho.y) > fruit.posicao.y))
+            {
+                if (fruit.special)
+                {
+                    // Determina o efeito da fruta especial
+                    fruit.color = RED;
+                    pontos += 15;
+                    int effect = GetRandomValue(0, 2);
+
+                    if (effect == 0)
+                    {
+                        // Aumenta a velocidade
+                        if (framesCounter > 2) framesCounter -= 2;
+                    }
+                    else if (effect == 1)
+                    {
+                        // Diminui a velocidade
+                        if (framesCounter < 20) framesCounter += 2;
+                    }
+                    else if (effect == 2)
+                    {
+                        // Reduz o tamanho
+                        if (counterTail > 1) counterTail--;
+                    }
+                }
+                else
+                {
+                    // Comportamento da fruta normal
+                    if (counterTail < COBRA_TAMANHO) {
+                        snake[counterTail].posicao = snakePosition[counterTail - 1];
+                        counterTail++;
+                    }
+                    fruit.color = SKYBLUE;
+                }
+
+                fruit.active = false;
+                pontos += 10;
+            }
+
+            framesCounter++;
+        }
+    }
+    else
+    {
+        if (IsKeyPressed(KEY_ENTER))
+        {
+            InitGame();
+            gameOver = false;
+        }
+    }
+    //se morrer atualiza pontuação
+    if(gameOver)
+    {
+        AtualizarPontuacao();
+        faseAtual=1;
+    }
+
+// Atualizar mapa conforme a pontuação
+if (pontos <= PONTOSF1) {
+    if (faseAtual == 1) {
+        faseCompleta = false;
+        CarregarMapa(MAPA1);
+
+        faseAtual = 1;
+    }
+}
+else if (pontos <= PONTOSF2) {
+    mudarFase(2, 1, MAPA2);
+}
+else if (pontos <= PONTOSF3) {
+    mudarFase(3, 2, MAPA3);
+}
+else if (pontos <= PONTOSF4) {
+    mudarFase(4, 3, MAPA4);
+} else
+    {
+        //tela de parabens yepi;
+
+    }
+
+
+
+/* Função para desenhar o jogo
+Essa função é responsável por desenhar todos os elementos do jogo na tela.
+Inclui desenhar o mapa, a cobra, a fruta e qualquer texto ou gráfico
+*/
+void DrawGame(void)
+{
+    BeginDrawing();
+    ClearBackground(RAYWHITE);
+
+    // Desenhar o mapa
+    DesenharMapa();
+
+    // Desenhar a cobra
+    for (int i = 0; i < counterTail; i++)
+    {
+        DrawRectangleV(snake[i].posicao, snake[i].tamanho, snake[i].color);
+    }
+
+    // Desenhar a fruta
+    if (fruit.active)  // Só desenha a fruta se estiver ativa
+    {
+        DrawRectangleV(fruit.posicao, fruit.tamanho, fruit.color);
+    }
+
+    if (pause)
+    {
+        DrawText("GAME PAUSED", LARGURA / 2 - MeasureText("GAME PAUSED", 40) / 2, ALTURA / 2 - 40, 40, GRAY);
+        DrawText(TextFormat("PONTOS: %d", pontos), LARGURA / 2 - MeasureText(TextFormat("PONTOS: %d", pontos), 20) / 2, ALTURA / 2, 20, GRAY);
+    }
+    else if (gameOver)
+    {
+        faseAtual = 1;
+        DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth() / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2, GetScreenHeight() / 2 - 50, 20, GRAY);
+        if (pontos > recorde)
+        {
+            recorde = pontos;
+            pontos = 0;
+        }
+        DrawText(TextFormat("RECORDE: %d", recorde), LARGURA / 2 - MeasureText(TextFormat("RECORDE: %d", recorde), 20) / 2, ALTURA / 2, 20, GRAY);
+    }
+
+    EndDrawing();
+}
+
+/* Função para atualizar e desenhar um frame
+Essa função é responsável por atualizar o estado do jogo com base na lógica do jogo,
+e então desenhar todos os elementos do jogo na tela.
+*/
+void UpdateDrawFrame(void)
+{
+    UpdateGame();
+    DrawGame();
+}
+
+/*Função do Menu
+Exibe o menu principal e manipula a entrada do usuário.
+retorna a opção selecionada: 1 para Jogar, 2 para Score, 3 para Sair.
+ */
+
+int Menu(void)
+{
+    while (!WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+
+        DrawText("Jogar", LARGURA / 2, ALTURA / 4, TAM_FONTE, BLACK);
+        DrawText("Score", LARGURA / 2, ALTURA / 4 + 50, TAM_FONTE, BLACK);
+        DrawText("Sair", LARGURA / 2, ALTURA / 4 + 100, TAM_FONTE, BLACK);
+
+        switch (opcao)
+        {
+            case 0:
+                DrawRectangleLines(LARGURA / 2 - 10, ALTURA / 4 - 5, 100, 30, RED);
+                break;
+            case 1:
+                DrawRectangleLines(LARGURA / 2 - 10, ALTURA / 4 + 50 - 5, 100, 30, RED);
+                break;
+            case 2:
+                DrawRectangleLines(LARGURA / 2 - 10, ALTURA / 4 + 100 - 5, 100, 30, RED);
+                break;
+        }
+
+        EndDrawing();
+
+        if (IsKeyPressed(KEY_UP)||IsKeyPressed(KEY_W))
+        {
+            opcao--;
+            if (opcao < 0) opcao = 2;
+        }
+        else if (IsKeyPressed(KEY_DOWN)||IsKeyPressed(KEY_S))
+        {
+            opcao++;
+            if (opcao > 2) opcao = 0;
+        }
+        else if (IsKeyPressed(KEY_ENTER))
+        {
+            return opcao + 1;  // 1 = Jogar, 2 = Score, 3 = Sair
+        }
+    }
+
+    return 3;  // Se a janela for fechada, retorna para a opção de sair
+}
+
+/*função para salvar as pontuações no arquivo
+
+Salva as pontuações mais altas em um arquivo.
+Esta função abre o arquivo "scores.txt" no modo de gravação. Se o arquivo não puder ser aberto,
+uma mensagem de erro é impressa e a função retorna imediatamente. Caso contrário,
+ela grava cada pontuação no array topScores no arquivo no formato "pontos timestamp\n".*/
+
+void SalvarPontuacao()
+{
+     FILE *file = fopen("scores.txt", "w");
+    if (file == NULL) {
+        printf("Erro ao abrir o arquivo de pontuacoes para escrita!\n");
+        return;
+    }
+
+    for (int i = 0; i < MAX_SCORES; i++) {
+        fprintf(file, "%d %ld\n", topScores[i].pontos, topScores[i].horario);
+    }
+
+    fclose(file);
+}
+/*Esta função abre o arquivo "scores.txt" no modo de leitura. Ela lê as pontuações e seus timestamps
+correspondentes do arquivo e os armazena no array topScores. Se o arquivo não puder ser aberto ou
+ocorrer um erro durante a leitura, uma mensagem de erro será impressa.*/
+void LerPontuacao()
+{
+   FILE *file = fopen("scores.txt", "r");
+    if (file = NULL)
+    {
+        printf("Erro ao abrir o arquivo de pontuacoes!\n");
+    }
+    int i = 0;
+        while (fscanf(file, "%d %ld", &topScores[i].pontos, &topScores[i].horario) == 2 && i < MAX_SCORES) {
+            i++;
+        }
+        fclose(file);
+}
+/*
+Esta função cria uma nova estrutura PlayerScore com a pontuação atual do jogo e o horário atual.
+Em seguida, ela itera pelo array topScores para encontrar a posição correta para a nova pontuação.
+Se a nova pontuação for maior do que qualquer pontuação no array topScores, ela desloca todas as pontuações mais baixas para baixo
+e insere a nova pontuação na posição correta.
+Finalmente, ela chama a função SalvarPontuacao para salvar a lista atualizada de pontuações máximas em um arquivo.
+*/
+void AtualizarPontuacao()
+{
+    PlayerScore newScore;
+    newScore.pontos = pontos;
+    newScore.horario = time(NULL); // horário atual
+
+    // Inserir a nova pontuação na lista
+    for (int i = 0; i < MAX_SCORES; i++)
+        {
+        if (newScore.pontos > topScores[i].pontos) {
+            for (int j = MAX_SCORES - 1; j > i; j--) {
+                topScores[j] = topScores[j - 1];
+            }
+            topScores[i] = newScore;
+            break;
+        }
+    }
+
+    SalvarPontuacao();
+}
+/*Função para mostrar as pontuações
+Essa função desenha continuamente as 10 melhores pontuações na tela até que o usuário pressione
+ENTER ou ESCAPE. As pontuações são exibidas de uma maneira formatada, incluindo
+a posição, os pontos e a data e hora em que a pontuação foi alcançada.
+
+*/
+void MostrarPontuacoes(void)
+{
+     while (!WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+
+        DrawText("Top 10 Scores", LARGURA / 2 - MeasureText("Top 10 Scores", TAM_FONTE) / 2, ALTURA / 4, TAM_FONTE, BLACK);
+        for (int i = 0; i < MAX_SCORES; i++)
+        {
+            if (topScores[i].pontos > 0)
+            {
+                char horarioStr[20];
+                strftime(horarioStr, 20, "%Y-%m-%d %H:%M:%S", localtime(&topScores[i].horario));
+                DrawText(TextFormat("%d.- %d - %s", i + 1, topScores[i].pontos, horarioStr), 20, ALTURA / 4 + 50 + i * 20, 20, GRAY);
+            }
+        }
+        DrawText("Pressione [ENTER] para voltar", LARGURA / 2 - MeasureText("Pressione [ENTER] para voltar", 20) / 2, ALTURA / 4 + 250, 20, GRAY);
+
+        EndDrawing();
+
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE)) {
+            break; // Volta ao menu
+        }
+    }}
