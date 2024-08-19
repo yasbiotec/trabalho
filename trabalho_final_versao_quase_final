@@ -269,7 +269,6 @@ void MostrarMensagemFaseCompleta(int fase)
 {
     const char *mensagem = TextFormat("Fase %d completa!", fase);
     int larguraMensagem = MeasureText(mensagem, 40);
-    const char *contagem = TextFormat("Fase começa em %d", SEGUNDOS);
 
     // Exibir a mensagem "Fase completa" antes de contar 4 segundos e começar a proxima
     DrawRectangle(0, 0, LARGURA, ALTURA, (Color){0, 255, 0, 100});
@@ -418,7 +417,7 @@ void UpdateGame(void)
             faseCompleta = false;
             faseAtual = 1;
     }
-    else if (pontos>= 10){
+    else if (pontos>= 100){
             if (!faseCompleta)
                 {
                     faseCompleta = true;
