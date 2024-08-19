@@ -214,9 +214,10 @@ void GerarFruta(void)
     
         fruit.posicao = (Vector2)
         {
-            GetRandomValue(1, ((LARGURA/CEDULAS)-1) * CEDULAS),
-            GetRandomValue(1, ((ALTURA/CEDULAS)-1) * CEDULAS)  // Evita a borda do mapa
+            GetRandomValue(1, (LARGURA/CEDULAS)-1) * CEDULAS,
+            GetRandomValue(1, (ALTURA/CEDULAS)-1) * CEDULAS  // Evita a borda do mapa
         };
+
 
         if (!VerificarColisaoComBarreira(fruit.posicao))
         {
