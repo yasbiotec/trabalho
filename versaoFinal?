@@ -262,6 +262,21 @@ void MostrarMensagemFaseCompleta(int fase)
     DrawText(mensagem, LARGURA / 2 - larguraMensagem / 2, ALTURA / 2 - 40, 40, BLACK);
     EndDrawing();
     }
+//Funçao para Mudar de fase
+void mudarFase(int novaFase, int mensagemFase, const char* mapa) {
+    if (faseAtual != novaFase) {
+        faseCompleta = false;
+        faseAtual = novaFase;
+    }
+
+    if (!faseCompleta) {
+        faseCompleta = true;
+        MostrarMensagemFaseCompleta(mensagemFase);
+        sleep(2);
+    }
+    CarregarMapa(mapa);
+}
+
 
 /*Função para atualizar o jogo
 Essa função lida com a lógica do jogo, incluindo o controle do jogador, movimento da cobra, detecção de colisões,
@@ -405,50 +420,27 @@ void UpdateGame(void)
     }
 
 // Atualizar mapa conforme a pontuação
-    if (pontos < 01){
-            CarregarMapa(MAPA1);
-            faseCompleta = false;
-            faseAtual = 1;
+if (pontos <= 10) {
+    if (faseAtual == 1) {
+        faseCompleta = false;
+        CarregarMapa(MAPA1);
+
+        faseAtual = 1;
     }
-    else if (pontos>= 100){
-            if (!faseCompleta)
-                {
-                    faseCompleta = true;
-                    MostrarMensagemFaseCompleta(1);
-                    sleep(2);
-                }
-                CarregarMapa(MAPA2);
-                faseAtual = 2;
-    }
-    else if (pontos>= 300){
-                if (!faseCompleta)
-                {
-                    faseCompleta = true;
-                    MostrarMensagemFaseCompleta(2);
-                    sleep(2);
-                }
-                CarregarMapa(MAPA3);
-                faseAtual = 3;
-                sleep(4);
-    }
-     else if (pontos>= 400){
-                if (!faseCompleta)
-                {
-                    faseCompleta = true;
-                    MostrarMensagemFaseCompleta(3);
-                    Sleep(2000); // Pausar por 2 segundos para a mensagem ser lida
-                }
-                CarregarMapa(MAPA4);
-                sleep(2);
-    }
+}
+else if (pontos >= 70) {
+    mudarFase(4, 3, MAPA4);
+}
+else if (pontos >= 50) {
+    mudarFase(3, 2, MAPA3);
+}
+else if (pontos >= 30) {
+    mudarFase(2, 1, MAPA2);
+}
     else{
                 //tela de parabens yepi;
             }
-
-
 }
-
-
 
 
 
