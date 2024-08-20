@@ -15,6 +15,10 @@
 #define MAPA2  "mapa_2.txt"
 #define MAPA3 "mapa_3.txt"
 #define MAPA4 "mapa_4.txt"
+#define PONTOSF1 50 //define numero de pontos para trocar de fase
+#define PONTOSF2 100
+#define PONTOSF3 150
+#define PONTOSF4 200
 
 // Tipos e estruturas do jogo
 typedef struct Snake {
@@ -228,12 +232,15 @@ void InitGame(void)
     framesCounter = 0;
     gameOver = false;
     pause = false;
+    faseAtual= 1;
 
     counterTail = 1;
     allowMove = false;
 
     offset.x = 0;
     offset.y = 0;
+    //reseta faseCompleta
+    faseCompleta=false;
 
     for (int i = 0; i < COBRA_TAMANHO; i++)
     {
@@ -247,6 +254,16 @@ void InitGame(void)
 
     fruit.tamanho = (Vector2){ CEDULAS, CEDULAS };
     fruit.active = false;
+    // Carregar o mapa da fase atual
+    if (faseAtual == 1) {
+        CarregarMapa(MAPA1);
+    } else if (faseAtual == 2) {
+        CarregarMapa(MAPA2);
+    } else if (faseAtual == 3) {
+        CarregarMapa(MAPA3);
+    } else if (faseAtual == 4) {
+        CarregarMapa(MAPA4);
+    }
 
     GerarFruta(); // Inicializa a fruta
 }
@@ -261,19 +278,25 @@ void MostrarMensagemFaseCompleta(int fase)
     DrawRectangle(0, 0, LARGURA, ALTURA, (Color){0, 255, 0, 100});
     DrawText(mensagem, LARGURA / 2 - larguraMensagem / 2, ALTURA / 2 - 40, 40, BLACK);
     EndDrawing();
-    }
+}
 //Funçao para Mudar de fase
-void mudarFase(int novaFase, int mensagemFase, const char* mapa) {
-    if (faseAtual != novaFase) {
+void mudarFase(int novaFase, int mensagemFase, const char* mapa)
+ {
+    if (faseAtual != novaFase)
+
+    {
         faseCompleta = false;
         faseAtual = novaFase;
+        
     }
 
-    if (!faseCompleta) {
+
+    if (!faseCompleta&& !gameOver) {
         faseCompleta = true;
         MostrarMensagemFaseCompleta(mensagemFase);
-        sleep(2);
+        WaitTime(0.3);
     }
+
     CarregarMapa(mapa);
 }
 
@@ -403,6 +426,30 @@ void UpdateGame(void)
             }
 
             framesCounter++;
+
+            // Atualizar mapa conforme a pontuação
+            if (pontos <= PONTOSF1) {
+                if (faseAtual != 1) {
+                    mudarFase(1, 1, MAPA1);
+                }
+            }
+            else if (pontos <= PONTOSF2) {
+                if (faseAtual != 2) {
+                    mudarFase(2, 1, MAPA2);
+                }
+            }
+            else if (pontos <= PONTOSF3) {
+                if (faseAtual != 3) {
+                    mudarFase(3, 2, MAPA3);
+                }
+            }
+            else if (pontos <= PONTOSF4) {
+                if (faseAtual != 4) {
+                    mudarFase(4, 3, MAPA4);
+                }
+            } else {
+                // Tela de parabéns ou fim de jogo
+            }
         }
     }
     else
@@ -410,39 +457,17 @@ void UpdateGame(void)
         if (IsKeyPressed(KEY_ENTER))
         {
             InitGame();
+            faseAtual=1;
             gameOver = false;
         }
     }
-    //se morrer atualiza pontuação
-    if(gameOver)
+
+    // Se morrer, atualiza a pontuação e reinicia a fase
+    if (gameOver)
     {
         AtualizarPontuacao();
     }
-
-// Atualizar mapa conforme a pontuação
-if (pontos <= 10) {
-    if (faseAtual == 1) {
-        faseCompleta = false;
-        CarregarMapa(MAPA1);
-
-        faseAtual = 1;
-    }
 }
-else if (pontos >= 70) {
-    mudarFase(4, 3, MAPA4);
-}
-else if (pontos >= 50) {
-    mudarFase(3, 2, MAPA3);
-}
-else if (pontos >= 30) {
-    mudarFase(2, 1, MAPA2);
-}
-    else{
-                //tela de parabens yepi;
-            }
-}
-
-
 
 /* Função para desenhar o jogo
 Essa função é responsável por desenhar todos os elementos do jogo na tela.
@@ -475,7 +500,7 @@ void DrawGame(void)
     }
     else if (gameOver)
     {
-        faseAtual=1;
+        faseAtual = 1;
         DrawText("PRESS [ENTER] TO PLAY AGAIN", GetScreenWidth() / 2 - MeasureText("PRESS [ENTER] TO PLAY AGAIN", 20) / 2, GetScreenHeight() / 2 - 50, 20, GRAY);
         if (pontos > recorde)
         {
@@ -575,7 +600,7 @@ ocorrer um erro durante a leitura, uma mensagem de erro será impressa.*/
 void LerPontuacao()
 {
    FILE *file = fopen("scores.txt", "r");
-    if (file = NULL)
+    if (file == NULL)
     {
         printf("Erro ao abrir o arquivo de pontuacoes!\n");
     }
@@ -599,7 +624,8 @@ void AtualizarPontuacao()
     newScore.horario = time(NULL); // horário atual
 
     // Inserir a nova pontuação na lista
-    for (int i = 0; i < MAX_SCORES; i++) {
+    for (int i = 0; i < MAX_SCORES; i++)
+        {
         if (newScore.pontos > topScores[i].pontos) {
             for (int j = MAX_SCORES - 1; j > i; j--) {
                 topScores[j] = topScores[j - 1];
@@ -641,5 +667,4 @@ void MostrarPontuacoes(void)
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE)) {
             break; // Volta ao menu
         }
-    }
-}
+    }}
