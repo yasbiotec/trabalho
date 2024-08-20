@@ -265,10 +265,13 @@ void MostrarMensagemFaseCompleta(int fase)
     DrawRectangle(0, 0, LARGURA, ALTURA, (Color){0, 255, 0, 100});
     DrawText(mensagem, LARGURA / 2 - larguraMensagem / 2, ALTURA / 2 - 40, 40, BLACK);
     EndDrawing();
-    }
+}
 //Funçao para Mudar de fase
-void mudarFase(int novaFase, int mensagemFase, const char* mapa) {
-    if (faseAtual != novaFase) {
+void mudarFase(int novaFase, int mensagemFase, const char* mapa)
+ {
+    if (faseAtual != novaFase) 
+    
+    {
         faseCompleta = false;
         faseAtual = novaFase;
     }
@@ -446,7 +449,7 @@ else if (pontos <= PONTOSF4) {
         //tela de parabens yepi;
 
     }
-
+}
 
 
 /* Função para desenhar o jogo
